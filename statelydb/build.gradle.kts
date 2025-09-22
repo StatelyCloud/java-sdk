@@ -15,7 +15,7 @@ plugins {
 }
 
 group = "cloud.stately"
-version = "0.5.1" // x-release-please-version
+version = "0.5.2" // x-release-please-version
 description =
     "Client for StatelyDB, a document database built on top of DynamoDB with Elastic Schema that allows you to change your data model any time with automatic backwards compatibility."
 

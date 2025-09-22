@@ -101,6 +101,17 @@ public class KeyPathBuilder {
   }
 
   /**
+   * Adds a namespace segment with a StatelyEnum identifier to the key path.
+   *
+   * @param namespace the namespace to add
+   * @param id the StatelyEnum identifier
+   * @return this builder for chaining
+   */
+  public KeyPathBuilder with(String namespace, StatelyEnum id) {
+    return with(namespace, id.getNumber());
+  }
+
+  /**
    * Builds the final key path string.
    *
    * @return the constructed key path
