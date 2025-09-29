@@ -1,5 +1,6 @@
 package cloud.stately.statelydb.auth;
 
+import java.net.URI;
 import java.util.concurrent.CompletableFuture;
 
 /**
@@ -7,6 +8,13 @@ import java.util.concurrent.CompletableFuture;
  * implementations. It provides access tokens for authentication with StatelyDB services.
  */
 public interface TokenProvider extends AutoCloseable {
+
+  /**
+   * Start the token provider with the given URI.
+   *
+   * @param uri The URI to start the token provider with
+   */
+  void start(URI uri);
 
   /**
    * Get the current access token.

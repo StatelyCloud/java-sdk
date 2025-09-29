@@ -15,7 +15,7 @@ import io.grpc.Server;
 import io.grpc.ServerBuilder;
 import io.grpc.Status;
 import java.lang.reflect.Method;
-import java.net.URL;
+import java.net.URI;
 import java.util.concurrent.CancellationException;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
@@ -45,7 +45,7 @@ class StatelyAccessTokenFetcherTest {
   @Test
   void testConstructor() throws Exception {
     StatelyAccessTokenFetcher fetcher =
-        StatelyAccessTokenFetcher.builder(new URL("http://localhost:8080"), "test-key", scheduler)
+        StatelyAccessTokenFetcher.builder(new URI("http://localhost:8080"), "test-key", scheduler)
             .baseRetryBackoffSecs(1)
             .build();
 
@@ -56,7 +56,7 @@ class StatelyAccessTokenFetcherTest {
   @Test
   void testBackoffCalculation() throws Exception {
     StatelyAccessTokenFetcher fetcher =
-        StatelyAccessTokenFetcher.builder(new URL("http://localhost:8080"), "test-key", scheduler)
+        StatelyAccessTokenFetcher.builder(new URI("http://localhost:8080"), "test-key", scheduler)
             .baseRetryBackoffSecs(2)
             .build();
 
@@ -101,7 +101,7 @@ class StatelyAccessTokenFetcherTest {
   @Test
   void testCloseMethod() throws Exception {
     StatelyAccessTokenFetcher fetcher =
-        StatelyAccessTokenFetcher.builder(new URL("http://localhost:8080"), "test-key", scheduler)
+        StatelyAccessTokenFetcher.builder(new URI("http://localhost:8080"), "test-key", scheduler)
             .baseRetryBackoffSecs(1)
             .build();
 
@@ -164,7 +164,7 @@ class StatelyAccessTokenFetcherTest {
       // Test successful token fetch
       StatelyAccessTokenFetcher fetcher =
           StatelyAccessTokenFetcher.builder(
-                  new URL("http://localhost:" + serverPort), "valid-key", scheduler)
+                  new URI("http://localhost:" + serverPort), "valid-key", scheduler)
               .baseRetryBackoffSecs(1)
               .build();
 
@@ -201,7 +201,7 @@ class StatelyAccessTokenFetcherTest {
       // Test failed token fetch
       StatelyAccessTokenFetcher failingFetcher =
           StatelyAccessTokenFetcher.builder(
-                  new URL("http://localhost:" + serverPort), "invalid-key", scheduler)
+                  new URI("http://localhost:" + serverPort), "invalid-key", scheduler)
               .baseRetryBackoffSecs(1)
               .build();
 
@@ -257,7 +257,7 @@ class StatelyAccessTokenFetcherTest {
     // Test successful token fetch after retries
     StatelyAccessTokenFetcher fetcher =
         StatelyAccessTokenFetcher.builder(
-                new URL("http://localhost:" + serverPort), "valid-key", scheduler)
+                new URI("http://localhost:" + serverPort), "valid-key", scheduler)
             .baseRetryBackoffSecs(0)
             .build();
 
@@ -298,7 +298,7 @@ class StatelyAccessTokenFetcherTest {
     // Test failed token fetch with non-retryable error
     StatelyAccessTokenFetcher fetcher =
         StatelyAccessTokenFetcher.builder(
-                new URL("http://localhost:" + serverPort), "valid-key", scheduler)
+                new URI("http://localhost:" + serverPort), "valid-key", scheduler)
             .baseRetryBackoffSecs(1)
             .build();
 
@@ -343,7 +343,7 @@ class StatelyAccessTokenFetcherTest {
     // Test failed token fetch with max retries enforced
     StatelyAccessTokenFetcher fetcher =
         StatelyAccessTokenFetcher.builder(
-                new URL("http://localhost:" + serverPort), "valid-key", scheduler)
+                new URI("http://localhost:" + serverPort), "valid-key", scheduler)
             .baseRetryBackoffSecs(0)
             .build();
 
@@ -389,7 +389,7 @@ class StatelyAccessTokenFetcherTest {
     // Test successful token fetch
     StatelyAccessTokenFetcher fetcher =
         StatelyAccessTokenFetcher.builder(
-                new URL("http://localhost:" + serverPort), "valid-key", scheduler)
+                new URI("http://localhost:" + serverPort), "valid-key", scheduler)
             .baseRetryBackoffSecs(1)
             .build();
 
@@ -434,7 +434,7 @@ class StatelyAccessTokenFetcherTest {
     // Test closing the fetcher
     StatelyAccessTokenFetcher fetcher =
         StatelyAccessTokenFetcher.builder(
-                new URL("http://localhost:" + serverPort), "valid-key", scheduler)
+                new URI("http://localhost:" + serverPort), "valid-key", scheduler)
             .baseRetryBackoffSecs(0)
             .build();
 

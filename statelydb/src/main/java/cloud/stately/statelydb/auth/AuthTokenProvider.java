@@ -2,7 +2,7 @@ package cloud.stately.statelydb.auth;
 
 import cloud.stately.statelydb.common.FutureUtils;
 import cloud.stately.statelydb.common.StatelyException;
-import java.net.URL;
+import java.net.URI;
 import java.time.Instant;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ScheduledExecutorService;
@@ -28,23 +28,12 @@ import java.util.concurrent.atomic.AtomicReference;
  *
  * // With custom endpoint and retry settings
  * AuthTokenProvider provider = AuthTokenProvider.builder(scheduler)
- *     .endpoint(new URL("https://custom.endpoint.com"))
  *     .accessKey("your-access-key")
  *     .baseRetryBackoffSecs(2)
  *     .build();
  * }</pre>
  */
 public class AuthTokenProvider implements TokenProvider {
-  /** Default endpoint for the Stately Cloud API. */
-  private static final URL DEFAULT_ENDPOINT;
-
-  static {
-    try {
-      DEFAULT_ENDPOINT = new URL("https://api.stately.cloud:443");
-    } catch (java.net.MalformedURLException e) {
-      throw new ExceptionInInitializerError(e);
-    }
-  }
 
   /** Default base retry backoff in seconds. */
   private static final long DEFAULT_BASE_RETRY_BACKOFF_SECS = 1;
@@ -56,7 +45,7 @@ public class AuthTokenProvider implements TokenProvider {
   private static final double JITTER_PERCENTAGE_RANGE = 0.05;
 
   /** The token fetcher used to retrieve access tokens. */
-  private final TokenFetcher tokenFetcher;
+  private AtomicReference<TokenFetcher> tokenFetcher = new AtomicReference<>(null);
 
   /**
    * The current token state, which includes the token and its expiration time. This is updated
@@ -81,23 +70,23 @@ public class AuthTokenProvider implements TokenProvider {
   /** The scheduler used for managing retries and delays. */
   private final ScheduledExecutorService scheduler;
 
+  /** The access key used for authentication. */
+  private final String accessKey;
+
+  /** The base retry backoff in seconds. */
+  private final long baseRetryBackoffSecs;
+
   /**
    * Constructs an AuthTokenProvider with a custom endpoint.
    *
-   * @param endpoint The endpoint to use for authentication
    * @param accessKey The access key for authentication
    * @param baseRetryBackoffSecs The base retry backoff in seconds
    * @param scheduler The scheduler for managing retries
    */
   public AuthTokenProvider(
-      URL endpoint,
-      String accessKey,
-      long baseRetryBackoffSecs,
-      ScheduledExecutorService scheduler) {
-    this.tokenFetcher =
-        StatelyAccessTokenFetcher.builder(endpoint, accessKey, scheduler)
-            .baseRetryBackoffSecs(baseRetryBackoffSecs)
-            .build();
+      String accessKey, long baseRetryBackoffSecs, ScheduledExecutorService scheduler) {
+    this.accessKey = accessKey;
+    this.baseRetryBackoffSecs = baseRetryBackoffSecs;
     this.scheduler = scheduler;
   }
 
@@ -113,24 +102,12 @@ public class AuthTokenProvider implements TokenProvider {
 
   /** Builder for AuthTokenProvider. Required fields: scheduler. */
   public static class Builder {
-    private URL endpoint = DEFAULT_ENDPOINT;
     private String accessKey;
     private long baseRetryBackoffSecs = DEFAULT_BASE_RETRY_BACKOFF_SECS;
     private final ScheduledExecutorService scheduler;
 
     private Builder(ScheduledExecutorService scheduler) {
       this.scheduler = scheduler;
-    }
-
-    /**
-     * Sets the endpoint for authentication. If not set, uses the default Stately Cloud endpoint.
-     *
-     * @param endpoint The endpoint to use for authentication
-     * @return This builder instance
-     */
-    public Builder endpoint(URL endpoint) {
-      this.endpoint = endpoint;
-      return this;
     }
 
     /**
@@ -169,7 +146,7 @@ public class AuthTokenProvider implements TokenProvider {
         finalAccessKey = getAccessKeyFromEnvironment();
       }
 
-      return new AuthTokenProvider(endpoint, finalAccessKey, baseRetryBackoffSecs, scheduler);
+      return new AuthTokenProvider(finalAccessKey, baseRetryBackoffSecs, scheduler);
     }
   }
 
@@ -195,6 +172,33 @@ public class AuthTokenProvider implements TokenProvider {
           "Unauthenticated");
     }
     return accessKey;
+  }
+
+  /**
+   * Start the token provider with the given URI.
+   *
+   * @param uri The URI to start the token provider with
+   */
+  @Override
+  public void start(URI uri) {
+    // This can be non null if the customer creates a custom token provider and
+    // starts it themselves. If start is called multiple times we just update
+    // the endpoint.
+    TokenFetcher oldFetcher =
+        this.tokenFetcher.getAndSet(
+            StatelyAccessTokenFetcher.builder(uri, accessKey, scheduler)
+                .baseRetryBackoffSecs(baseRetryBackoffSecs)
+                .build());
+    if (oldFetcher != null) {
+      try {
+        oldFetcher.close();
+      } catch (Exception e) {
+        // Ignore errors closing the old fetcher.
+      }
+    }
+
+    // kick off a background refresh to prime the cache.
+    refreshToken();
   }
 
   /**
@@ -238,7 +242,11 @@ public class AuthTokenProvider implements TokenProvider {
         backgroundRefresh.cancel(true);
       }
 
-      tokenFetcher.close();
+      TokenFetcher tokenFetcher = this.tokenFetcher.getAndSet(null);
+      if (tokenFetcher != null) {
+        tokenFetcher.close();
+      }
+
     } catch (Exception e) {
       throw StatelyException.from(e);
     }
@@ -286,6 +294,9 @@ public class AuthTokenProvider implements TokenProvider {
   }
 
   private CompletableFuture<String> refreshTokenImpl() {
+    // just assume this is not null because we call start in the client constructor.
+    // All of our integ tests will fail if someone ever removes it for some reason.
+    TokenFetcher tokenFetcher = this.tokenFetcher.get();
     CompletableFuture<TokenResult> fetchFuture = tokenFetcher.fetch();
     return fetchFuture.thenApply(
         tokenResult -> {

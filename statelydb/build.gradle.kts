@@ -14,8 +14,12 @@ plugins {
     id("org.jreleaser") version "1.20.0"
 }
 
+// Note: JavaPluginConvention deprecation warning is from JReleaser plugin v1.20.0
+// This is a known issue tracked at https://github.com/jreleaser/jreleaser/issues/1673
+// The warning will be fixed in a future JReleaser version for Gradle 9.0 compatibility
+
 group = "cloud.stately"
-version = "0.5.2" // x-release-please-version
+version = "0.6.0" // x-release-please-version
 description =
     "Client for StatelyDB, a document database built on top of DynamoDB with Elastic Schema that allows you to change your data model any time with automatic backwards compatibility."
 

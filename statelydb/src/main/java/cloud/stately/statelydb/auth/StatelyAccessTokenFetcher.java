@@ -9,7 +9,7 @@ import com.google.common.util.concurrent.ListenableFuture;
 import io.grpc.ManagedChannel;
 import io.grpc.ManagedChannelBuilder;
 import io.grpc.Status;
-import java.net.URL;
+import java.net.URI;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
@@ -25,7 +25,7 @@ import java.util.concurrent.ThreadLocalRandom;
  *
  * <pre>{@code
  * StatelyAccessTokenFetcher fetcher = StatelyAccessTokenFetcher.builder(
- *     new URL("https://api.stately.cloud:443"),
+ *     new URI("https://api.stately.cloud:443"),
  *     "your-access-key",
  *     scheduler)
  *     .baseRetryBackoffSecs(1)
@@ -80,7 +80,7 @@ public class StatelyAccessTokenFetcher implements TokenFetcher {
    * @param scheduler The scheduled executor service used for retries and delays
    */
   public StatelyAccessTokenFetcher(
-      URL endpoint,
+      URI endpoint,
       String accessKey,
       long baseRetryBackoffSecs,
       ScheduledExecutorService scheduler) {
@@ -94,7 +94,7 @@ public class StatelyAccessTokenFetcher implements TokenFetcher {
             .maxInboundMetadataSize(
                 Integer.MAX_VALUE); // disabled so that large error details don't cause issues
 
-    if (endpoint.getProtocol().equals("http")) {
+    if (endpoint.getScheme().equals("http")) {
       channelBuilder.usePlaintext();
     }
 
@@ -111,18 +111,18 @@ public class StatelyAccessTokenFetcher implements TokenFetcher {
    * @return A new Builder instance
    */
   public static Builder builder(
-      URL endpoint, String accessKey, ScheduledExecutorService scheduler) {
+      URI endpoint, String accessKey, ScheduledExecutorService scheduler) {
     return new Builder(endpoint, accessKey, scheduler);
   }
 
   /** Builder for StatelyAccessTokenFetcher. Required fields: endpoint, accessKey, scheduler. */
   public static class Builder {
-    private final URL endpoint;
+    private final URI endpoint;
     private final String accessKey;
     private long baseRetryBackoffSecs = 1; // Default value
     private final ScheduledExecutorService scheduler;
 
-    private Builder(URL endpoint, String accessKey, ScheduledExecutorService scheduler) {
+    private Builder(URI endpoint, String accessKey, ScheduledExecutorService scheduler) {
       this.endpoint = endpoint;
       this.accessKey = accessKey;
       this.scheduler = scheduler;

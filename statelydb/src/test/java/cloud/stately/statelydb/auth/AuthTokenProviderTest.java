@@ -11,7 +11,7 @@ import cloud.stately.statelydb.common.StatelyException;
 import io.grpc.Server;
 import io.grpc.ServerBuilder;
 import io.grpc.Status;
-import java.net.URL;
+import java.net.URI;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
@@ -79,23 +79,6 @@ class AuthTokenProviderTest {
 
     AuthTokenProvider provider =
         AuthTokenProvider.builder(scheduler)
-            .accessKey(accessKey)
-            .baseRetryBackoffSecs(baseRetryBackoffSecs)
-            .build();
-
-    assertNotNull(provider);
-  }
-
-  @Test
-  void testConstructorWithCustomEndpoint() throws Exception {
-    // Test the constructor with custom endpoint
-    URL endpoint = new URL("https://custom.endpoint.com:443");
-    String accessKey = "test-access-key";
-    long baseRetryBackoffSecs = 1;
-
-    AuthTokenProvider provider =
-        AuthTokenProvider.builder(scheduler)
-            .endpoint(endpoint)
             .accessKey(accessKey)
             .baseRetryBackoffSecs(baseRetryBackoffSecs)
             .build();
@@ -217,13 +200,13 @@ class AuthTokenProviderTest {
     withTestServer(
         handler,
         serverPort -> {
-          URL endpoint = new URL("http://localhost:" + serverPort);
+          URI endpoint = new URI("http://localhost:" + serverPort);
           AuthTokenProvider provider =
               AuthTokenProvider.builder(scheduler)
-                  .endpoint(endpoint)
                   .accessKey("valid-key")
                   .baseRetryBackoffSecs(1L)
                   .build();
+          provider.start(endpoint);
           String token = provider.getToken().get();
           assertEquals("test-token-12345", token);
         });
@@ -250,13 +233,13 @@ class AuthTokenProviderTest {
     withTestServer(
         handler,
         serverPort -> {
-          URL endpoint = new URL("http://localhost:" + serverPort);
+          URI endpoint = new URI("http://localhost:" + serverPort);
           AuthTokenProvider provider =
               AuthTokenProvider.builder(scheduler)
-                  .endpoint(endpoint)
                   .accessKey("valid-key")
                   .baseRetryBackoffSecs(1L)
                   .build();
+          provider.start(endpoint);
           String token = provider.getToken().get();
           assertEquals("1", token);
           // Wait for the second call to refresh the token
@@ -286,14 +269,13 @@ class AuthTokenProviderTest {
 
     int serverPort = server.getPort();
 
-    URL endpoint = new URL("http://localhost:" + serverPort);
+    URI endpoint = new URI("http://localhost:" + serverPort);
     AuthTokenProvider provider =
         AuthTokenProvider.builder(scheduler)
-            .endpoint(endpoint)
             .accessKey("valid-key")
             .baseRetryBackoffSecs(0L)
             .build();
-
+    provider.start(endpoint);
     try {
       provider.getToken().get();
     } catch (Exception e) {
@@ -330,13 +312,14 @@ class AuthTokenProviderTest {
 
     int serverPort = server.getPort();
 
-    URL endpoint = new URL("http://localhost:" + serverPort);
+    URI endpoint = new URI("http://localhost:" + serverPort);
     AuthTokenProvider provider =
         AuthTokenProvider.builder(scheduler)
-            .endpoint(endpoint)
             .accessKey("valid-key")
             .baseRetryBackoffSecs(1L)
             .build();
+
+    provider.start(endpoint);
 
     List<CompletableFuture<String>> futures = new ArrayList<>();
     for (int i = 0; i < 10; i++) {
@@ -374,13 +357,13 @@ class AuthTokenProviderTest {
 
     int serverPort = server.getPort();
 
-    URL endpoint = new URL("http://localhost:" + serverPort);
+    URI endpoint = new URI("http://localhost:" + serverPort);
     AuthTokenProvider provider =
         AuthTokenProvider.builder(scheduler)
-            .endpoint(endpoint)
             .accessKey("valid-key")
             .baseRetryBackoffSecs(1L)
             .build();
+    provider.start(endpoint);
     // First fetch should succeed
     String token = provider.getToken().get();
     assertEquals(token, "1");
@@ -422,13 +405,13 @@ class AuthTokenProviderTest {
 
     int serverPort = server.getPort();
 
-    URL endpoint = new URL("http://localhost:" + serverPort);
+    URI endpoint = new URI("http://localhost:" + serverPort);
     AuthTokenProvider provider =
         AuthTokenProvider.builder(scheduler)
-            .endpoint(endpoint)
             .accessKey("valid-key")
             .baseRetryBackoffSecs(1L)
             .build();
+    provider.start(endpoint);
     // First fetch should succeed
     String token = provider.getToken().get();
     assertEquals(token, "1");

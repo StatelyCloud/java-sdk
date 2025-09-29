@@ -23,7 +23,7 @@ import io.grpc.CallCredentials;
 import io.grpc.ManagedChannel;
 import io.grpc.ManagedChannelBuilder;
 import io.grpc.Status;
-import java.net.URL;
+import java.net.URI;
 import java.util.Arrays;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
@@ -49,7 +49,7 @@ public class Client implements AutoCloseable {
   private final TokenProvider tokenProvider;
 
   /* The endpoint to use for API requests. */
-  private final URL endpoint;
+  private final URI endpoint;
 
   /*
    * Whether to disable auth for this client.
@@ -81,7 +81,7 @@ public class Client implements AutoCloseable {
     private BaseTypeMapper typeMapper;
     private ScheduledExecutorService scheduler;
     private TokenProvider tokenProvider;
-    private URL endpoint;
+    private URI endpoint;
     private String region;
     private Boolean noAuth = false;
 
@@ -118,12 +118,12 @@ public class Client implements AutoCloseable {
     }
 
     /**
-     * Sets the endpoint URL for the client.
+     * Sets the endpoint URI for the client.
      *
-     * @param endpoint the endpoint URL to use
+     * @param endpoint the endpoint URI to use
      * @return this builder instance
      */
-    public Builder endpoint(URL endpoint) {
+    public Builder endpoint(URI endpoint) {
       this.endpoint = endpoint;
       return this;
     }
@@ -157,14 +157,14 @@ public class Client implements AutoCloseable {
      * @throws StatelyException if required parameters are missing
      */
     public Client build() {
-      URL resolvedEndpoint = makeEndpoint(endpoint, region);
+      URI resolvedEndpoint = makeEndpoint(endpoint, region);
 
       ManagedChannelBuilder<?> channelBuilder =
           ManagedChannelBuilder.forAddress(resolvedEndpoint.getHost(), resolvedEndpoint.getPort())
               .executor(scheduler)
               .maxInboundMetadataSize(
                   Integer.MAX_VALUE); // disabled so that large error details don't cause issues
-      if (resolvedEndpoint.getProtocol().equals("http")) {
+      if (resolvedEndpoint.getScheme().equals("http")) {
         channelBuilder.usePlaintext();
       }
       ManagedChannel channel = channelBuilder.build();
@@ -182,6 +182,7 @@ public class Client implements AutoCloseable {
         } else {
           resolvedTokenProvider = tokenProvider;
         }
+        resolvedTokenProvider.start(resolvedEndpoint);
         // overwrite the stubs with the authenticated stubs
         CallCredentials callCreds = new AuthTokenCallCredentials(resolvedTokenProvider);
         futureStub = futureStub.withCallCredentials(callCreds);
@@ -201,14 +202,14 @@ public class Client implements AutoCloseable {
           observerStub);
     }
 
-    private static URL makeEndpoint(URL endpoint, String region) {
+    private static URI makeEndpoint(URI endpoint, String region) {
       if (endpoint != null) {
         return endpoint;
       }
       if (region == null) {
         try {
-          return new URL(DEFAULT_ENDPOINT_STRING);
-        } catch (java.net.MalformedURLException e) {
+          return new URI(DEFAULT_ENDPOINT_STRING);
+        } catch (java.net.URISyntaxException e) {
           throw new StatelyException(
               "Invalid default endpoint: " + DEFAULT_ENDPOINT_STRING + ". Please contact support.",
               Status.Code.INTERNAL,
@@ -220,8 +221,8 @@ public class Client implements AutoCloseable {
       }
 
       try {
-        return new URL("https://" + region + ".api.stately.cloud:443");
-      } catch (java.net.MalformedURLException e) {
+        return new URI("https://" + region + ".api.stately.cloud:443");
+      } catch (java.net.URISyntaxException e) {
         throw new StatelyException(
             "Invalid region: " + region, Status.Code.INVALID_ARGUMENT, "InvalidArgument");
       }
@@ -247,7 +248,7 @@ public class Client implements AutoCloseable {
    * @param storeId the store ID
    * @param typeMapper the type mapper for converting between proto and Java types
    * @param tokenProvider the token provider for authentication
-   * @param endpoint the API endpoint URL
+   * @param endpoint the API endpoint URI
    * @param noAuth whether to disable authentication
    * @param allowStale whether to allow stale reads
    * @param scheduler the scheduled executor service
@@ -259,7 +260,7 @@ public class Client implements AutoCloseable {
       long storeId,
       BaseTypeMapper typeMapper,
       TokenProvider tokenProvider,
-      URL endpoint,
+      URI endpoint,
       Boolean noAuth,
       Boolean allowStale,
       ScheduledExecutorService scheduler,
